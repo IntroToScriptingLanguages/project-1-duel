@@ -5,26 +5,258 @@
     <title>The Duel</title>
     <style>
     div {
+      display: none;
       white-space: pre;
       font-family: monospace;
+    }
+    .visible{
+      display: block;
     }
     </style>
   </head>
   <body>
-    <div id="duel1">
-~O  O~
-<|/\|>
- |\ |\
+    <div id='ready' class="visible">
+   ~O  O~
+   &lt;|/\|&gt;
+    |\ |\
     </div>
-    <div id="duel2">
-~O  O~
-<|--|>
-/ \/ \
+
+    <div id='duel' class="">
+   ~O  O~
+   &lt;|--|&gt;
+   / \/ \
     </div>
-    <div id="duel3">
-~O  O~
-<|\/|>
- |\ |\
+    <div id='tie' class="">
+   ~O  O~
+   &lt;|\/|&gt;
+    |\ |\
     </div>
+
+    <div id='p1_strike' class="">
+  /0   O~
+ --&lt;---|&gt;
+    \\ |\
+    </div>
+    <div id='p1_win1' class="">
+  ~O     0\
+   |--- //\
+   |\  &lt;/
+    </div>
+    <div id='p1_win2' class="">
+  ~O
+   |---      |
+   |\    ==---0~
+    </div>
+    <div id='p1_win3' class="">
+ \~O /
+  \|/        |
+  / \    ==---0~
+    </div>
+
+    <div id='p2_strike' class="">
+   ~O   0\
+    |---&gt;--
+    |\ //
+    </div>
+    <div id='p2_win1' class="">
+   /0     O~
+   /\\ ---|&gt;
+     \&gt;   |\
+    </div>
+    <div id='p2_win2' class="">
+             O~
+   |      ---|&gt;
+ ~0---==     |\
+    </div>
+    <div id='p2_win3' class="">
+           \ O~/
+   |        \|/
+ ~0---==    / \
+    </div>
+
+    <div id='error' class="">
+      ===========================
+          AN ERROR HAS OCCURED
+      ===========================
+    </div>
+
+    <div id="label" class="visible">Let the duel commence!</div>
+    <div id="buffer" class="visible"></div>
+
+    <div id="hp" class="visible">
+    </div>
+
+    <script>
+      var transition_time = 4000; //How many seconds between animations
+
+      var status = 'ready'; //Used to choose what to do.
+      var frame = document.getElementById('ready'); //The current frame to display. "Ready" by default.
+      var label = document.getElementById('label');
+      var hp = document.getElementById('hp');
+
+      /*
+      ADJUST STARTING HP HERE!
+      */
+      var p1_hp = 10;
+      var p2_hp = 10;
+
+      //Attacks listed below.  0 = None, 1 = Rock, 2 = Paper, 3 = Scissors
+      var p1_attack = 0; //1 < 2 < 3 < 1
+      var p2_attack = 0;
+
+      var p1_weapon = "Default"; //Weapon names for text stored here.
+      var p2_weapon = "Default";
+
+      var winner = 0; //0 = none, 1 = P1, 2 = P2
+
+      //The original intent of placing these next two lines was to cause the "Remaining HP" section appear on the first "Ready for the next move" rather than by default.  I suppose it didn't work out as I planned...
+      document.getElementById('buffer').innerHTML = "\n\nRemaining Hit Points:"; //Learned here I can't have a statement span multiple lines...
+      updateHP();
+
+      var frame_count = 1; //For when a player wins... Records how many frames have passed since (for victory animation).
+
+      var interval = setInterval(function() {
+        /*Dunno if there's any switch statements in JavaScript*/
+        if (status == 'ready') //Battle preparations, each player choose an attack Pokemon-style!
+        {
+           changeFrame(frame, 'ready');
+           label.innerHTML = "Ready for the next move!";
+
+           //Both player decide their next moves...
+           p1_attack = Math.floor(Math.random()*3)+1; //If this was interactive media, both player would input their interactions here!
+           p2_attack = Math.floor(Math.random()*3)+1;
+
+           status = 'duel';
+        }
+        else if (status == 'duel') //The duel begins!  Damage is calculated here!
+        {
+          changeFrame(frame, 'duel');
+
+          var weapons = ["Default", "Rock Sword", "Paper Sword", "Scissor Sword"]; //Weapons checked here!
+          p1_weapon = weapons[p1_attack];
+          p2_weapon = weapons[p2_attack];
+
+          label.innerHTML = "Both players attack! Player 1 attacked with "+p1_weapon+"!  Player 2 attacked with "+p2_weapon+"!";
+
+          if (p1_attack-p2_attack == 1 || p1_attack-p2_attack == -2) //Player 1 wins!
+          {
+              status = 'p2_strike';
+          }
+          else if (p2_attack-p1_attack == 1 || p2_attack-p1_attack == -2) //Player 2 wins!
+          {
+             status = 'p1_strike';
+          }
+          else if (p1_attack = p2_attack) //It's a tie!
+          {
+             status = 'tie';
+          }
+          else { //An error occurred.
+             status = 'error';
+          }
+        }
+        else if (status == 'p2_strike') //P1 wins attack!
+        {
+           changeFrame(frame, 'p2_strike');
+
+           var crit = Math.floor(Math.random()*10);
+           if (crit < 3) //30% chance of a critical hit
+           {
+              label.innerHTML = "Player 1 scored a critical hit!  Player 2 takes 2 damage!";
+
+              p2_hp = p2_hp-2; //Actual damage here
+              if (p2_hp < 0) //We have to take into account the HP may be under 0 when more than one point is eliminated.  Don't know where I should put this...
+              {
+                p2_hp = 0
+              }
+           }
+           else //No crit
+           {
+             label.innerHTML = "Player 1's attack struck!  Player 2 takes 1 damage!";
+
+             p2_hp = p2_hp-1; //Actual damage here
+           }
+
+           updateHP();
+
+           if (p2_hp <= 0) //Player 1 wins the battle!
+           {
+              winner = 1;
+              status = 'victory';
+           }
+           else {
+              status = 'ready'; //Return to the beginning, next round!
+           }
+        }
+        else if (status == 'p1_strike') //P2 wins attack!
+        {
+           changeFrame(frame, 'p1_strike');
+
+           var crit = Math.floor(Math.random()*10);
+           if (crit < 3) //30% chance of a critical hit
+           {
+              label.innerHTML = "Player 2 scored a critical hit!  Player 1 takes 2 damage!";
+
+              p1_hp = p1_hp-2; //Actual damage here
+              if (p1_hp < 0) //We have to take into account the HP may be under 0 when more than one point is eliminated.  Don't know where I should put this...
+              {
+                p1_hp = 0;
+              }
+           }
+           else //No crit
+           {
+             label.innerHTML = "Player 2's attack struck!  Player 1 takes 1 damage!";
+
+             p1_hp = p1_hp-1; //Actual damage here
+           }
+
+           updateHP();
+
+           if (p1_hp <= 0) //Player 1 wins the battle!
+           {
+              winner = 2;
+              status = 'victory';
+           }
+           else {
+              status = 'ready'; //Return to the beginning, next round!
+           }
+        }
+        else if (status == 'tie') //No one wins or loses
+        {
+           label.innerHTML = "It's a tie!";
+           changeFrame(frame, 'tie');
+           status = 'ready';
+        }
+        else if (status = 'victory')//A player wins!  Not the best implementation, but it works...
+        {
+          label.innerHTML = "";
+          changeFrame(frame, 'p'+winner+'_win'+frame_count);
+          frame_count++;
+
+          if (frame_count >= 4) //The interval only lasts three times.
+          {
+              label.innerHTML = "Player "+winner+" wins!" //And we have a winner!
+              clearInterval(interval);
+          }
+        }
+        else {
+          changeFrame(frame, 'error');
+          label.innerHTML = "An error has occured...";
+        }
+      }, transition_time);
+
+      function changeFrame(id1, id2) //Frame, String
+      {
+        id1.className = '';
+        var newFrame = document.getElementById(id2);
+        newFrame.className = 'visible';
+        frame = newFrame; //The active frame will be changed here.
+
+      }
+
+      function updateHP() //Syncs p1_hp and p2_hp with the data in the hp divide.
+      {
+        hp.innerHTML = "Player 1 = "+p1_hp+"\nPlayer 2 = "+p2_hp;
+      }
+    </script>
   </body>
 </html>
